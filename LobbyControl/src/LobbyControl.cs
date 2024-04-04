@@ -137,14 +137,7 @@ namespace LobbyControl
                     ,"After how much time discard a hanging connection");
                 JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_delay_ms",500
                     ,"Delay between each successful connection");
-                //Networking
-                Networking.Enabled = config.Bind("Networking","enabled",false
-                    ,"[Experimental][Advanced] Enable edits to the packet queues");
-                Networking.MaxPacketQueueSize = config.Bind("Networking","MaxPacketQueueSize",2048
-                    ,"[Advanced] how many packets can be processed in a single tick [vanilla: 128]");
-                Networking.MaxSendQueueSize = config.Bind("Networking","MaxSendQueueSize",98304
-                    ,"[Advanced] how many packets can be sent in a single tick [vanilla: 0]");
-
+                
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -192,13 +185,6 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<int> ConnectionTimeout;
                 internal static ConfigEntry<int> ConnectionDelay;
-            }
-            
-            internal static class Networking
-            {
-                internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<int> MaxPacketQueueSize;
-                internal static ConfigEntry<int> MaxSendQueueSize;
             }
 
         }

@@ -151,13 +151,6 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return;
 
-            if (LobbyControl.PluginConfig.Networking.Enabled.Value)
-            {
-                var unityTransport = UnityEngine.Object.FindObjectOfType<UnityTransport>();
-                unityTransport.MaxPacketQueueSize = LobbyControl.PluginConfig.Networking.MaxPacketQueueSize.Value;
-                unityTransport.MaxSendQueueSize = LobbyControl.PluginConfig.Networking.MaxSendQueueSize.Value;
-            }
-
             LobbyControl.CanModifyLobby = true;
             PendingClients.Clear();
         }
