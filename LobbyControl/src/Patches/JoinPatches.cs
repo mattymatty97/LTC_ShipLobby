@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using GameNetcodeStuff;
 using HarmonyLib;
+using LobbyControl.Dependency;
 using Unity.Netcode;
 
 namespace LobbyControl.Patches

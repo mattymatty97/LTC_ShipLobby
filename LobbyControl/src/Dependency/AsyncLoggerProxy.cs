@@ -31,49 +31,52 @@ using System;
 using System.Runtime.CompilerServices;
 using AsyncLoggers.DBAPI;
 
-public class AsyncLoggerProxy
-{        
-    private static bool? _enabled;
-    public static bool Enabled
-    {
-        get
+namespace LobbyControl.Dependency
+{
+    public static class AsyncLoggerProxy
+    {        
+        private static bool? _enabled;
+        public static bool Enabled
         {
-            if (_enabled.HasValue)
-                return _enabled.Value;
-            if (BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue("mattymatty.AsyncLoggers", out var pluginInfo))
+            get
             {
-                if (pluginInfo.Metadata.Version >= new Version(1, 6, 0))
+                if (_enabled.HasValue)
+                    return _enabled.Value;
+                try
                 {
-                    _enabled = true;
-                    return true;
+                    _enabled = isDbEnabled();
+                }catch (Exception)            
+                {                
+                    _enabled = false;
+                    return false;
                 }
+                return _enabled.Value;
             }
-            _enabled = false;
-            return false;
         }
-    }
     
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-    public static void WriteEvent(string source, string tag, string data, DateTime? timestamp = null)
-    {
-        SqliteLogger.WriteEvent(source, tag, data, timestamp);
-    }
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        public static void WriteEvent(string source, string tag, string data, DateTime? timestamp = null)
+        {
+            SqliteLogger.WriteEvent(source, tag, data, timestamp);
+        }
     
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-    public static void WriteData(string source, string tag, string data, DateTime? timestamp = null)
-    {
-        SqliteLogger.WriteData(source, tag, data, timestamp);
-    }
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        public static void WriteData(string source, string tag, string data, DateTime? timestamp = null)
+        {
+            SqliteLogger.WriteData(source, tag, data, timestamp);
+        }
     
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-    public static bool isDbEnabled()
-    {
-        return SqliteLogger.Enabled;
-    }
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        public static bool isDbEnabled()
+        {
+            return SqliteLogger.Enabled;
+        }
     
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-    public static int getExecutionID()
-    {
-        return SqliteLogger.ExecutionId;
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        public static int getExecutionID()
+        {
+            return SqliteLogger.ExecutionId;
+        }
+    
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using HarmonyLib;
+using LobbyControl.Dependency;
 using Steamworks;
 using Steamworks.Data;
 

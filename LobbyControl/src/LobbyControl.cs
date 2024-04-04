@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
@@ -20,7 +21,7 @@ namespace LobbyControl
     [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("FlipMods.ReservedItemSlotCore", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("BMX.LobbyCompatibility", Flags:BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("mattymatty.AsyncLoggers",  Flags:BepInDependency.DependencyFlags.SoftDependency)]
+    //[BepInDependency("mattymatty.AsyncLoggers",  Flags:BepInDependency.DependencyFlags.SoftDependency)]
     internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.LobbyControl";
@@ -52,19 +53,24 @@ namespace LobbyControl
                 PluginInfo[] incompatibleMods = Chainloader.PluginInfos.Values.Where(p => IncompatibleGUIDs.Contains(p.Metadata.GUID)).ToArray();
                 if (incompatibleMods.Length > 0)
                 {    
+                    StringBuilder sb = new StringBuilder("LOBBY CONTROL was DISABLED!\nIncompatible:");
                     FoundIncompatibilities.AddRange(incompatibleMods);
                     foreach (var mod in incompatibleMods)
                     {
-                        Log.LogWarning($"{mod.Metadata.Name} is incompatible!");   
+                        Log.LogWarning($"{mod.Metadata.Name} is incompatible!");
+                        if (AsyncLoggerProxy.Enabled)
+                            AsyncLoggerProxy.WriteEvent(NAME, "Incompatibility", mod.Metadata.Name);
+                        sb.Append("\n").Append(mod.Metadata.Name);
                     }
                     Log.LogError($"{incompatibleMods.Length} incompatible mods found! Disabling!");
                     var harmony = new Harmony(GUID);
-                    harmony.PatchAll(typeof(OnDisablePatch));
+                    PopUpPatch.PopUps.Add(new Tuple<string, string>("LC_Incompatibility",sb.ToString()));
+                    harmony.PatchAll(typeof(PopUpPatch));
                 }
                 else
                 {
                     if (LobbyCompatibilityChecker.Enabled)
-                        LobbyCompatibilityChecker.Init();
+                        LobbyCompatibilityChecker.Init(GUID,Version.Parse(VERSION),1,2);
                     if (AsyncLoggerProxy.Enabled)
                         AsyncLoggerProxy.WriteEvent(NAME, "Awake", "Initializing");
                     Log.LogInfo("Initializing Configs");
@@ -131,6 +137,13 @@ namespace LobbyControl
                     ,"After how much time discard a hanging connection");
                 JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_delay_ms",500
                     ,"Delay between each successful connection");
+                //Networking
+                Networking.Enabled = config.Bind("Networking","enabled",false
+                    ,"[Experimental][Advanced] Enable edits to the packet queues");
+                Networking.MaxPacketQueueSize = config.Bind("Networking","MaxPacketQueueSize",2048
+                    ,"[Advanced] how many packets can be processed in a single tick [vanilla: 128]");
+                Networking.MaxSendQueueSize = config.Bind("Networking","MaxSendQueueSize",98304
+                    ,"[Advanced] how many packets can be sent in a single tick [vanilla: 0]");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -179,6 +192,13 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<int> ConnectionTimeout;
                 internal static ConfigEntry<int> ConnectionDelay;
+            }
+            
+            internal static class Networking
+            {
+                internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<int> MaxPacketQueueSize;
+                internal static ConfigEntry<int> MaxSendQueueSize;
             }
 
         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using BepInEx;
+using LobbyControl.Dependency;
 using LobbyControl.Patches;
 using Unity.Netcode;
 using UnityEngine;
@@ -540,8 +541,9 @@ Extra:
             }
             
             LobbyControl.Log.LogDebug("Clearing Lobby");
+            LobbyControl.CanSave = true;
             GameNetworkManager.Instance.ResetSavedGameValues();
-
+            LobbyControl.CanSave = LobbyControl.AutoSaveEnabled;
             var res = LoadCommand(ref node, new string[3]);
             if (res)
             {
@@ -645,6 +647,7 @@ Extra:
                 //sync item variables
                 startOfRound.SyncShipUnlockablesServerRpc();
             }
+            
             GameNetworkManager.Instance.gameHasStarted = mem;
             
             if (AsyncLoggerProxy.Enabled)

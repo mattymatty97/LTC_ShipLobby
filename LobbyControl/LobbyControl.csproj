@@ -62,7 +62,6 @@
         <Content Include="GameDirectory.targets.example" />
         <Content Include="Output\.gitignore" />
         <Content Include="Output\Experimental\clipboard.txt" />
-        <Content Include="Output\Experimental\LobbyControl-2.3.4.0.zip" />
         <Content Include="PostBuildEvents.targets"/>
     </ItemGroup>
     <ItemGroup>

@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using LobbyControl.Dependency;
 
 namespace LobbyControl.Patches
 {
@@ -23,6 +24,17 @@ namespace LobbyControl.Patches
             return LobbyControl.CanSave;
         }
 
+        /// <summary>
+        ///     Skip saving the lobby if AutoSave is of
+        ///     Write the AutoSave status to the SaveFile
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ResetSavedGameValues))]
+        private static bool PreventSaveFileReset(GameNetworkManager __instance)
+        {
+            return LobbyControl.CanSave;
+        }
+        
         /// <summary>
         ///     Read the AutoSave status of the current File.
         /// </summary>

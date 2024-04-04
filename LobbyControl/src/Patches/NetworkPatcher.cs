@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using HarmonyLib;
 using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using OpCodes = System.Reflection.Emit.OpCodes;
@@ -150,6 +151,13 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return;
 
+            if (LobbyControl.PluginConfig.Networking.Enabled.Value)
+            {
+                var unityTransport = UnityEngine.Object.FindObjectOfType<UnityTransport>();
+                unityTransport.MaxPacketQueueSize = LobbyControl.PluginConfig.Networking.MaxPacketQueueSize.Value;
+                unityTransport.MaxSendQueueSize = LobbyControl.PluginConfig.Networking.MaxSendQueueSize.Value;
+            }
+
             LobbyControl.CanModifyLobby = true;
             PendingClients.Clear();
         }
@@ -196,44 +204,6 @@ namespace LobbyControl.Patches
                 // Restore the friend invite button in the ESC menu.
                 Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
             }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientConnect))]
-        [HarmonyPriority(Priority.High)]
-        private static bool PreventExtraClients(StartOfRound __instance, bool __runOriginal, ulong clientId)
-        {
-            if (!__runOriginal)
-                return false;
-
-            if (!__instance.IsServer)
-                return true;
-
-            if (__instance.connectedPlayersAmount + PendingClients.Count < __instance.allPlayerObjects.Length - 1)
-            {
-                PendingClients.Add(clientId);
-                return true;
-            }
-
-            LobbyControl.Log.LogWarning(
-                $"Player with ID {clientId} attempted to join a full lobby! pending {PendingClients.Count}");
-            NetworkManager.Singleton.DisconnectClient(clientId);
-            return false;
-        }
-
-        [HarmonyFinalizer]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
-        private static void ForgetPendingClients(StartOfRound __instance, ulong clientId)
-        {
-            if (!__instance.IsServer)
-                return;
-
-            var networkManager = __instance.NetworkManager;
-            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client ||
-                (!networkManager.IsClient && !networkManager.IsHost))
-                return;
-
-            PendingClients.Remove(clientId);
         }
         
         [HarmonyPostfix]

@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using LobbyCompatibility.Enums;
 using LobbyCompatibility.Features;
@@ -9,9 +10,9 @@ namespace LobbyControl.Dependency
         public static bool Enabled { get { return BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("BMX.LobbyCompatibility"); } }
         
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-        public static void Init()
+        public static void Init(string GUID, Version version, int Level, int strictness)
         {
-            PluginHelper.RegisterPlugin(LobbyControl.GUID, System.Version.Parse(LobbyControl.VERSION), CompatibilityLevel.ServerOnly, VersionStrictness.Minor);
+            PluginHelper.RegisterPlugin(GUID, version, (CompatibilityLevel)Level, (VersionStrictness)strictness);
         }
         
     }
