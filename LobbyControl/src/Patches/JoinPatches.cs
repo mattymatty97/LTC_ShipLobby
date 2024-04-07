@@ -16,14 +16,14 @@ namespace LobbyControl.Patches
         [HarmonyFinalizer]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
         [HarmonyPriority(10)]
-        private static void ThrottleApprovals(bool __runOriginal,
+        private static void ThrottleApprovals(
             NetworkManager.ConnectionApprovalRequest request,
             NetworkManager.ConnectionApprovalResponse response,
             Exception __exception)
         {
             if (__exception != null)
                 return;
-            if (!__runOriginal || !response.Approved)
+            if (!response.Approved)
                 return;
             
             if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)

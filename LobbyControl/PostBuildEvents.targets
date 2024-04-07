@@ -12,30 +12,6 @@
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
     </ItemGroup>
-    <!-- Defining the reference files that have to be publicized. -->
-    <ItemGroup>
-        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all"/>
-
-        <!-- Publicize directly when referencing -->
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Assembly-CSharp.dll" Publicize="true"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Assembly-CSharp-firstpass.dll" Publicize="true"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Facepunch.Steamworks.Win64.dll" Publicize="true"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.Netcode.Runtime.dll" Publicize="true"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.Netcode.Components.dll" Publicize="true"/>
-
-        <!-- clean referencing -->
-        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.TextMeshPro.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.UIModule.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AnimationModule.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.PhysicsModule.dll" Publicize="false"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AudioModule.dll" Publicize="false"/>
-        <Reference Include="..\Dependencies\ReservedItemSlotCore.dll" Publicize="false"/>
-        <Reference Include="..\Dependencies\AsyncLoggers.dll" Publicize="false"/>
-</ItemGroup>
-
 <!-- Ensure the user (you!) has actually set everything up properly. -->
     <Target Name="EnsureGameDirectoryDefined" BeforeTargets="PrepareForBuild">
         <PropertyGroup>
