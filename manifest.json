@@ -1,6 +1,6 @@
 {
   "name": "LobbyControl",
-  "version_number": "2.3.5",
+  "version_number": "2.3.6",
   "website_url": "https://github.com/mattymatty97/LTC_LobbyControl",
   "description": "A collection of Patches for Lethal Company with Quality of life changes for the Host.",
   "dependencies": [

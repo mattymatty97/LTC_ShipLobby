@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text;
 
 namespace LobbyControl.TerminalCommands
 {
@@ -51,13 +52,24 @@ namespace LobbyControl.TerminalCommands
         private static string[] GetArgs(string[] array, int length)
         {
             List<string> args = new List<string>();
+            StringBuilder sb = new StringBuilder();
+            int count = 0;
 
             foreach (string arg in array)
             {
-                if (arg.Trim() == string.Empty) continue;
-
-                args.Add(arg.Trim());
+                if (arg.Trim() == string.Empty) 
+                    continue;
+                count++;
+                if (count < length)
+                    args.Add(arg.Trim());
+                else
+                {
+                    sb.Append(arg.Trim()).Append(" ");
+                }
             }
+            
+            if (sb.Length > 0)
+                args.Add(sb.ToString().Trim());
 
             if (args.Count > length) return args.ToArray();
 

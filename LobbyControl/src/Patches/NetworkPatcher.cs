@@ -14,7 +14,6 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class NetworkPatcher
     {
-        private static readonly HashSet<ulong> PendingClients = new HashSet<ulong>();
 
         /// <summary>
         ///     Do not check for gameHasStarted.
@@ -152,7 +151,6 @@ namespace LobbyControl.Patches
                 return;
 
             LobbyControl.CanModifyLobby = true;
-            PendingClients.Clear();
         }
 
         /// <summary>
