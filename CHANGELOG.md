@@ -1,5 +1,6 @@
 ## v2.3.6
 - fix spaces in `lobby rename`
+- fix wrong radar names on late joining ( hopefully )
 
 ## v2.3.5
 - soft integration with new AsyncLoggers API
