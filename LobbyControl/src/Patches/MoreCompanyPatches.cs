@@ -1,6 +1,5 @@
 ﻿using System;
 using HarmonyLib;
-using Unity.Netcode;
 
 namespace LobbyControl.Patches
 {

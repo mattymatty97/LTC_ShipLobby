@@ -20,18 +20,19 @@ namespace LobbyControl.Patches
         [HarmonyFinalizer]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
         [HarmonyPriority(10)]
-        private static void ThrottleApprovals(
+        private static Exception ThrottleApprovals(
             NetworkManager.ConnectionApprovalRequest request,
             NetworkManager.ConnectionApprovalResponse response,
             Exception __exception)
         {
             if (__exception != null)
-                return;
+                return __exception;
+            
             if (!response.Approved)
-                return;
+                return null;
             
             if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
-                return;
+                return null;
             
             if (AsyncLoggerProxy.Enabled)
                 AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Enqueued {Encoding.ASCII.GetString(request.Payload)} remaining:{ConnectionQueue.Count}");
@@ -39,6 +40,7 @@ namespace LobbyControl.Patches
             response.Pending = true;
             ConnectionQueue.Enqueue(response);
             LobbyControl.Log.LogWarning($"Connection request Enqueued! count:{ConnectionQueue.Count}");
+            return null;
         }
 
         private static readonly ConcurrentQueue<NetworkManager.ConnectionApprovalResponse> ConnectionQueue = new ConcurrentQueue<NetworkManager.ConnectionApprovalResponse>();
@@ -255,6 +257,9 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.SendNewPlayerValuesClientRpc))]
         private static IEnumerable<CodeInstruction> fixRadarNames(IEnumerable<CodeInstruction> instructions)
         {
+            if (!LobbyControl.PluginConfig.SteamLobby.RadarFix.Value)
+                return instructions;
+            
             var codes = instructions.ToList();
 
             var fieldInfo = typeof(TransformAndName).GetField(nameof(TransformAndName.name));
