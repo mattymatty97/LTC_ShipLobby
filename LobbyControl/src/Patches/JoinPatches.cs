@@ -65,7 +65,7 @@ namespace LobbyControl.Patches
             }
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
         private static void ResetForDc(StartOfRound __instance, int playerObjectNumber)
         {
@@ -98,7 +98,7 @@ namespace LobbyControl.Patches
         }
 
         //SyncAlreadyHeldObjectsServerRpc
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_682230258))]
         private static void ClientConnectionCompleted1(
             NetworkBehaviour target,
@@ -132,7 +132,7 @@ namespace LobbyControl.Patches
         }
         
         //SendNewPlayerValuesServerRpc
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.__rpc_handler_2504133785))]
         private static void ClientConnectionCompleted2(
             NetworkBehaviour target, __RpcParams rpcParams)
@@ -164,7 +164,7 @@ namespace LobbyControl.Patches
             }
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LateUpdate))]
         private static void ProcessConnectionQueue()
         {
@@ -230,7 +230,7 @@ namespace LobbyControl.Patches
             }
         }
 
-        [HarmonyPostfix]
+        [HarmonyFinalizer]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnLocalDisconnect))]
         private static void FlushConnectionQueue()
         {
@@ -255,7 +255,7 @@ namespace LobbyControl.Patches
 
         [HarmonyTranspiler]
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.SendNewPlayerValuesClientRpc))]
-        private static IEnumerable<CodeInstruction> fixRadarNames(IEnumerable<CodeInstruction> instructions)
+        private static IEnumerable<CodeInstruction> FixRadarNames(IEnumerable<CodeInstruction> instructions)
         {
             if (!LobbyControl.PluginConfig.SteamLobby.RadarFix.Value)
                 return instructions;

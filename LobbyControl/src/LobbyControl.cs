@@ -21,12 +21,11 @@ namespace LobbyControl
     [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("FlipMods.ReservedItemSlotCore", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("BMX.LobbyCompatibility", Flags:BepInDependency.DependencyFlags.SoftDependency)]
-    //[BepInDependency("mattymatty.AsyncLoggers",  Flags:BepInDependency.DependencyFlags.SoftDependency)]
     internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.6";
+        public const string VERSION = "2.3.7";
 
         internal static ManualLogSource Log;
 
