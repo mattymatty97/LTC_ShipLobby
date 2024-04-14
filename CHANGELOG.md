@@ -1,3 +1,10 @@
+## v2.4.0
+- Rewritten Transparent Player Fix thanks to Zeekers adding a better way to handle it
+- Added config toggle for RadarName Patch
+- Removed log patch for MoreCompany as now it is fixed
+
+## !! From this point LobbyControl will only be compatible with v50+
+
 ## v2.3.6
 - fix spaces in `lobby rename`
 - fix wrong radar names on late joining ( hopefully )

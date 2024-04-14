@@ -25,7 +25,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.7";
+        public const string VERSION = "2.4.0";
 
         internal static ManualLogSource Log;
 
@@ -129,8 +129,6 @@ namespace LobbyControl
                     ,"stop pathfinding for dead Enemies");
                 LogSpam.AudioSpatializer = config.Bind("LogSpam","audio_spatializer",true
                     ,"disable audio spatialization as there is not spatialization plugin");
-                LogSpam.MoreCompany = config.Bind("LogSpam","more_company",true
-                    ,"Remove some leftover Exceptions caused by MoreCompany");
                 //JoinQueue
                 JoinQueue.Enabled = config.Bind("JoinQueue","enabled",true
                     ,"handle joining players as a queue instead of at the same time");
@@ -179,7 +177,6 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<bool> CalculatePolygonPath;
                 internal static ConfigEntry<bool> AudioSpatializer;
-                internal static ConfigEntry<bool> MoreCompany;
             }
             
             internal static class JoinQueue

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection.Emit;
 using HarmonyLib;
 using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using OpCodes = System.Reflection.Emit.OpCodes;
@@ -202,7 +201,10 @@ namespace LobbyControl.Patches
         private static void ResetDcFlags(StartOfRound __instance, ulong clientId, 
             int assignedPlayerObjectId)
         {
-            __instance.allPlayerScripts[assignedPlayerObjectId].disconnectedMidGame = false;
+            var controllerB = __instance.allPlayerScripts[assignedPlayerObjectId]; 
+            controllerB.disconnectedMidGame = false;
+            //re-enable the player model ( typically needed for back-filling players )
+            controllerB.DisablePlayerModel(controllerB.gameObject, true, true);
         }
         
     }
