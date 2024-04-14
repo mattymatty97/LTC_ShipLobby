@@ -4,6 +4,7 @@ LobbyControl
 [![GitHub Pre-Release](https://img.shields.io/github/v/release/mattymatty97/LTC_LobbyControl?include_prereleases&display_name=release&logo=github&logoColor=white&label=preview)](https://github.com/mattymatty97/LTC_LobbyControl/releases)  
 [![Thunderstore Downloads](https://img.shields.io/thunderstore/dt/mattymatty/LobbyControl?style=flat&logo=thunderstore&logoColor=white&label=thunderstore)](https://thunderstore.io/c/lethal-company/p/mattymatty/LobbyControl/)
 
+### **!!v49 compatibility has been dropped with v2.4.0, if you still play v49 please downgrade to v2.3.6!!**
 
 A collection of Patches for Lethal Company with Quality of life changes for the Host.
 
@@ -45,6 +46,7 @@ Patches:
     - stop **CalculatePolygonPath** when enemies die
 - ### Others:
   - Prevent host crashes when an extra player tries to join when the lobby is already full but the last player has not finished joining 
+  - Fix wrong names in radarMap when a booster is enabled
 
 Terminal Command:
 -----------------
