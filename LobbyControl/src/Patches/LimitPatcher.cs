@@ -1,12 +1,63 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Unity.Collections;
+using Unity.Netcode;
 
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
     internal class LimitPatcher
     {
+        
+        [HarmonyTranspiler]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesClientRpc))]
+        private static IEnumerable<CodeInstruction> PacketSizePatch(IEnumerable<CodeInstruction> instructions)
+        {
+            var methodInfo = typeof(NetworkBehaviour).GetMethod(nameof(NetworkBehaviour.__beginSendClientRpc), BindingFlags.Instance | BindingFlags.NonPublic);
+            var contructorInfo = typeof(FastBufferWriter).GetConstructor([typeof(int),typeof(Allocator),typeof(int)]);
+
+            List<CodeInstruction> codes = [..instructions];
+
+            for (var i = 0; i < codes.Count; i++)
+            {
+                var curr = codes[i];
+                if (curr.Calls(methodInfo))
+                {
+                    var next = codes[i + 1];
+                    
+                    codes.InsertRange(i+1, new CodeInstruction[]
+                    {
+                        new(OpCodes.Pop)
+                        {
+                            blocks = next.blocks
+                        },
+                        new(OpCodes.Ldc_I4, 1024)
+                        {
+                            blocks = next.blocks
+                        },
+                        new(OpCodes.Ldc_I4_2)
+                        {
+                            blocks = next.blocks
+                        },
+                        new(OpCodes.Ldc_I4, int.MaxValue)
+                        {
+                            blocks = next.blocks
+                        },
+                        new(OpCodes.Newobj, contructorInfo)
+                        {
+                            blocks = next.blocks
+                        }
+                    });
+                    LobbyControl.Log.LogDebug($"Patched PacketSize!");
+                }
+            }
+
+            return codes;
+        }
+        
         [HarmonyTranspiler]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesServerRpc))]
         private static IEnumerable<CodeInstruction> SyncUnlockablesPatch(IEnumerable<CodeInstruction> instructions)
