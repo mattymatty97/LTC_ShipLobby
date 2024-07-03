@@ -23,9 +23,9 @@ namespace LobbyControl.Patches
 
             var controller = __instance.allPlayerScripts[playerObjectNumber];
 
-            if (controller.isPlayerDead)
+            if (!StartOfRound.Instance.inShipPhase)
             {
-                LobbyControl.Log.LogWarning($"Player {controller.playerUsername} disconnected while Dead!");
+                LobbyControl.Log.LogWarning($"Player {controller.playerUsername} disconnected while playing!");
                 if (__instance.IsServer)
                 {
                     LobbyControl.Log.LogInfo($"Player {controller.playerUsername} added to the list of Respawnables");
@@ -39,7 +39,7 @@ namespace LobbyControl.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnLocalDisconnect))]
-        private static void PreventDc()
+        private static void ClearDc()
         {
             ToRespawn.Clear();
         }

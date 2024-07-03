@@ -16,91 +16,92 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesClientRpc))]
         private static IEnumerable<CodeInstruction> PacketSizePatch(IEnumerable<CodeInstruction> instructions)
         {
+            if (!LobbyControl.PluginConfig.SaveLimit.Enabled.Value)
+                return instructions;
+            
             var methodInfo = typeof(NetworkBehaviour).GetMethod(nameof(NetworkBehaviour.__beginSendClientRpc), BindingFlags.Instance | BindingFlags.NonPublic);
             var contructorInfo = typeof(FastBufferWriter).GetConstructor([typeof(int),typeof(Allocator),typeof(int)]);
 
-            List<CodeInstruction> codes = [..instructions];
+            var codes = instructions.ToList();
+            
+            var matcher = new CodeMatcher(codes);
 
-            for (var i = 0; i < codes.Count; i++)
+            matcher.MatchForward(true, new CodeMatch(OpCodes.Call, methodInfo));
+            
+            if (matcher.IsInvalid)
             {
-                var curr = codes[i];
-                if (curr.Calls(methodInfo))
-                {
-                    var next = codes[i + 1];
-                    
-                    codes.InsertRange(i+1, new CodeInstruction[]
-                    {
-                        new(OpCodes.Pop)
-                        {
-                            blocks = next.blocks
-                        },
-                        new(OpCodes.Ldc_I4, 1024)
-                        {
-                            blocks = next.blocks
-                        },
-                        new(OpCodes.Ldc_I4_2)
-                        {
-                            blocks = next.blocks
-                        },
-                        new(OpCodes.Ldc_I4, int.MaxValue)
-                        {
-                            blocks = next.blocks
-                        },
-                        new(OpCodes.Newobj, contructorInfo)
-                        {
-                            blocks = next.blocks
-                        }
-                    });
-                    LobbyControl.Log.LogDebug($"Patched PacketSize!");
-                }
+                LobbyControl.Log.LogWarning("PacketSize patch failed 1!!");
+                LobbyControl.Log.LogDebug(string.Join("\n", matcher.Instructions()));
+                return codes;
             }
 
-            return codes;
+            matcher.Advance(1);
+
+            matcher.Insert(
+                new CodeInstruction(OpCodes.Pop),
+                new CodeInstruction(OpCodes.Ldc_I4, 1024),
+                new CodeInstruction(OpCodes.Ldc_I4_2),
+                new CodeInstruction(OpCodes.Ldc_I4, int.MaxValue),
+                new CodeInstruction(OpCodes.Newobj, contructorInfo)
+                );
+            
+            LobbyControl.Log.LogDebug($"Patched PacketSize!");
+
+            return matcher.Instructions();
         }
         
         [HarmonyTranspiler]
+        [HarmonyPriority(Priority.First)]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesServerRpc))]
         private static IEnumerable<CodeInstruction> SyncUnlockablesPatch(IEnumerable<CodeInstruction> instructions)
         {
             if (!LobbyControl.PluginConfig.SaveLimit.Enabled.Value)
                 return instructions;
 
-            List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+            var methodInfo = typeof(GrabbableObject).GetMethod(nameof(GrabbableObject.GetItemDataToSave));
 
-            for (var i = 0; i < codes.Count; i++)
+            var codes = instructions.ToList();
+            
+            var matcher = new CodeMatcher(codes);
+            
+            matcher.End();
+            matcher.MatchBack(false,
+                new CodeMatch(OpCodes.Callvirt, methodInfo)
+            );
+
+            if (matcher.IsInvalid)
             {
-                var curr = codes[i];
-                if (curr.LoadsConstant(250))
-                {
-                    var next = codes[i + 1];
-                    var prev = codes[i - 1];
-                    if (next.Branches(out Label? dest))
-                    {
-                        codes[i - 1] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = prev.labels,
-                            blocks = prev.blocks
-                        };
-                        codes[i] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = curr.labels,
-                            blocks = curr.blocks
-                        };
-                        codes[i + 1] = new CodeInstruction(OpCodes.Br_S, dest)
-                        {
-                            labels = next.labels,
-                            blocks = next.blocks
-                        };
-                        LobbyControl.Log.LogDebug("Patched SyncShipUnlockablesServerRpc!!");
-                        break;
-                    }
-                }
+                LobbyControl.Log.LogWarning("SyncShipUnlockablesServerRpc patch failed 1!!");
+                LobbyControl.Log.LogDebug(string.Join("\n", matcher.Instructions()));
+                return codes;
             }
 
-            return codes;
+            matcher.MatchBack(false,
+                new CodeMatch(OpCodes.Ldloc_S),
+                new CodeMatch(OpCodes.Ldc_I4),
+                new CodeMatch(OpCodes.Ble)
+                );
+
+            if (matcher.IsInvalid)
+            {
+                LobbyControl.Log.LogWarning("SyncShipUnlockablesServerRpc patch failed 2!!");
+                LobbyControl.Log.LogDebug(string.Join("\n", matcher.Instructions()));
+                return codes;
+            }
+
+            var labels = matcher.Labels;
+
+            matcher.RemoveInstructions(6);
+
+            matcher.AddLabels(labels);
+            
+            LobbyControl.Log.LogDebug("Patched SyncShipUnlockablesServerRpc!!");
+            
+            return matcher.Instructions();
         }
 
         [HarmonyTranspiler]
+        [HarmonyPriority(Priority.First)]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveItemsInShip))]
         private static IEnumerable<CodeInstruction> SaveItemsInShipPatch(IEnumerable<CodeInstruction> instructions)
         {
@@ -108,44 +109,35 @@ namespace LobbyControl.Patches
                 return instructions;
 
             var fieldInfo = typeof(StartOfRound).GetField(nameof(StartOfRound.maxShipItemCapacity));
+            var methodInfo = typeof(StartOfRound).GetProperty(nameof(StartOfRound.Instance))!.GetMethod;
+            
+            var codes = instructions.ToList();
+            
+            var matcher = new CodeMatcher(codes);
 
-            List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
-
-            for (var i = 0; i < codes.Count; i++)
+            matcher.MatchForward(false,
+                new CodeMatch(OpCodes.Ldloc_S),
+                new CodeMatch(OpCodes.Call, methodInfo),
+                new CodeMatch(OpCodes.Ldfld, fieldInfo),
+                new CodeMatch(OpCodes.Bgt)
+            );
+            
+            if (matcher.IsInvalid)
             {
-                var curr = codes[i];
-                if (curr.LoadsField(fieldInfo))
-                {
-                    var next = codes[i + 1];
-                    if (next.Branches(out Label? dest))
-                    {
-                        codes[i - 2] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = codes[i - 2].labels,
-                            blocks = codes[i - 2].blocks
-                        };
-                        codes[i - 1] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = codes[i - 1].labels,
-                            blocks = codes[i - 1].blocks
-                        };
-                        codes[i] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = codes[i].labels,
-                            blocks = codes[i].blocks
-                        };
-                        codes[i + 1] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = codes[i + 1].labels,
-                            blocks = codes[i + 1].blocks
-                        };
-                        LobbyControl.Log.LogDebug("Patched SaveItemsInShip!!");
-                        break;
-                    }
-                }
+                LobbyControl.Log.LogWarning("SaveItemsInShip patch failed 1!!");
+                LobbyControl.Log.LogDebug(string.Join("\n", matcher.Instructions()));
+                return codes;
             }
+            
+            var labels = matcher.Labels;
 
-            return codes;
+            matcher.RemoveInstructions(4);
+
+            matcher.AddLabels(labels);
+            
+            LobbyControl.Log.LogDebug("Patched SaveItemsInShip!!");
+
+            return matcher.Instructions();
         }
     }
 }

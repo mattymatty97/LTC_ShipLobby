@@ -1,7 +1,17 @@
+## v2.4.3
+- compatibility with v55
+
+## v2.4.2
+- error from previous version
+
+## v2.4.1
+- Rewritten Limit Patcher
+
 ## v2.4.0
 - Rewritten Transparent Player Fix thanks to Zeekers adding a better way to handle it
 - Added config toggle for RadarName Patch
 - Removed log patch for MoreCompany as now it is fixed
+- remove packet size limit for scrap value sync
 
 ## !! From this point LobbyControl will only be compatible with v50+
 
