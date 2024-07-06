@@ -85,6 +85,7 @@ namespace LobbyControl
                     var harmony = new Harmony(GUID);
                     harmony.PatchAll(Assembly.GetExecutingAssembly());
                     JoinPatches.RegisterMonoModHooks();
+                    TransparentPlayerFix.Init();
                     
                     Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
                     if (AsyncLoggerProxy.Enabled)
