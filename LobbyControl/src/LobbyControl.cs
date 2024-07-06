@@ -9,8 +9,10 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using LobbyControl.Dependency;
+using LobbyControl.Patches;
 using LobbyControl.PopUp;
 using LobbyControl.TerminalCommands;
+using MonoMod.RuntimeDetour;
 using PluginInfo = BepInEx.PluginInfo;
 
 namespace LobbyControl
@@ -33,6 +35,7 @@ namespace LobbyControl
 
         public static bool CanSave = true;
         public static bool AutoSaveEnabled = true;
+        public static readonly List<Hook> Hooks = new List<Hook>();
 
 
         private static readonly string[] IncompatibleGUIDs = new string[]
@@ -73,7 +76,7 @@ namespace LobbyControl
                     if (AsyncLoggerProxy.Enabled)
                         AsyncLoggerProxy.WriteEvent(NAME, "Awake", "Initializing");
                     Log.LogInfo("Initializing Configs");
-
+                    
                     PluginConfig.Init(this);
                     
                     CommandManager.Initialize();
@@ -81,6 +84,7 @@ namespace LobbyControl
                     Log.LogInfo("Patching Methods");
                     var harmony = new Harmony(GUID);
                     harmony.PatchAll(Assembly.GetExecutingAssembly());
+                    JoinPatches.RegisterMonoModHooks();
                     
                     Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
                     if (AsyncLoggerProxy.Enabled)

@@ -125,9 +125,13 @@ namespace LobbyControl.Patches
         ///     Temporarily close the lobby while a game is ongoing. This prevents people trying to join mid-game.
         /// </summary>
         [HarmonyPrefix]
+        [HarmonyPriority(Priority.Last)]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.StartGame))]
-        private static void CloseSteamLobby(StartOfRound __instance)
+        private static void CloseSteamLobby(StartOfRound __instance, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
+            
             if (__instance.IsServer && __instance.inShipPhase)
             {
                 LobbyControl.Log.LogDebug("Setting lobby to not joinable.");

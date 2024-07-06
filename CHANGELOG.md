@@ -1,3 +1,11 @@
+## v2.4.3.3
+- use MonoMod to prevent round Start
+- fix use of KillPlayer for InvisiblePlayerPatch
+- get killPlayer and RevivePlayer rpc id at runtime
+
+## v2.4.3.2
+- Prevent landing if there are players connecting to the lobby
+
 ## v2.4.3
 - compatibility with v55
 

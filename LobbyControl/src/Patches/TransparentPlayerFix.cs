@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
+using Mono.Cecil;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -44,6 +47,89 @@ namespace LobbyControl.Patches
             ToRespawn.Clear();
         }
 
+
+        private static uint? _killPlayerID;
+        private static uint? _revivePlayerID;
+
+        [HarmonyReversePatch(HarmonyReversePatchType.Original)]
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayerClientRpc))]
+        private static void StubKillPlayer()
+        {
+            IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = instructions.ToList();
+
+                var methodInfo = typeof(NetworkBehaviour).GetMethod(nameof(NetworkBehaviour.__beginSendClientRpc), BindingFlags.Instance | BindingFlags.NonPublic);
+                
+                var matcher = new CodeMatcher(codes);
+
+                matcher.MatchForward(true, new CodeMatch(OpCodes.Call, methodInfo));
+
+                if (matcher.IsInvalid)
+                {
+                    LobbyControl.Log.LogFatal("KillPlayerClientRpc match 1 failed!!");
+                    return [];
+                }
+
+                matcher.MatchBack(true,
+                    new CodeMatch(OpCodes.Ldarg_0),
+                    new CodeMatch(OpCodes.Ldc_I4));
+                
+                if (matcher.IsInvalid)
+                {
+                    LobbyControl.Log.LogFatal($"KillPlayerClientRpc match 2 failed!!");
+                    return [];
+                }
+                
+                _killPlayerID = (uint)(int)matcher.Operand;
+                LobbyControl.Log.LogWarning($"KillPlayerClientRpc ID found: {_killPlayerID}U");
+
+                return [];
+            }
+
+            _ = Transpiler(null);
+        }
+        
+        [HarmonyReversePatch(HarmonyReversePatchType.Original)]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Debug_ReviveAllPlayersClientRpc))]
+        private static void StubRevivePlayers()
+        {
+            IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = instructions.ToList();
+
+                var methodInfo = typeof(NetworkBehaviour).GetMethod(nameof(NetworkBehaviour.__beginSendClientRpc), BindingFlags.Instance | BindingFlags.NonPublic);
+                
+                var matcher = new CodeMatcher(codes);
+
+                matcher.MatchForward(true, new CodeMatch(OpCodes.Call, methodInfo));
+
+                if (matcher.IsInvalid)
+                {
+                    LobbyControl.Log.LogFatal("Debug_ReviveAllPlayersClientRpc match 1 failed!!");
+                    return [];
+                }
+
+                matcher.MatchBack(true,
+                    new CodeMatch(OpCodes.Ldarg_0),
+                    new CodeMatch(OpCodes.Ldc_I4));
+                
+                if (matcher.IsInvalid)
+                {
+                    LobbyControl.Log.LogFatal($"Debug_ReviveAllPlayersClientRpc match 2 failed!!");
+                    return [];
+                }
+                
+                _revivePlayerID = (uint)(int)matcher.Operand;
+                LobbyControl.Log.LogWarning($"Debug_ReviveAllPlayersClientRpc ID found: {_revivePlayerID}U");
+
+                return [];
+            }
+
+            _ = Transpiler(null);
+        }
+        
+        
         //SendNewPlayerValuesServerRpc
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.__rpc_handler_2504133785))]
@@ -64,6 +150,9 @@ namespace LobbyControl.Patches
 
             ToRespawn.Remove(objectId);
             
+            if (!StartOfRound.Instance.inShipPhase)
+                return;
+            
             try
             {
                 var rpcList = startOfRound.ClientPlayerList.Keys.ToList();
@@ -79,18 +168,19 @@ namespace LobbyControl.Patches
                 };
                 
                 //Client Kill
-                var bufferWriter = controllerB.__beginSendClientRpc(168339603U, clientRpcParams, RpcDelivery.Reliable);
+                var bufferWriter = controllerB.__beginSendClientRpc(_killPlayerID!.Value, clientRpcParams, RpcDelivery.Reliable);
                 BytePacker.WriteValueBitPacked(bufferWriter, objectId);
                 bufferWriter.WriteValueSafe(false);
                 bufferWriter.WriteValueSafe(Vector3.zero);
-                BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Kicking);
+                BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Unknown);
                 BytePacker.WriteValueBitPacked(bufferWriter, 0);
-                controllerB.__endSendClientRpc(ref bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable);
+                bufferWriter.WriteValueSafe(Vector3.zero);
+                controllerB.__endSendClientRpc(ref bufferWriter, _killPlayerID!.Value, clientRpcParams, RpcDelivery.Reliable);
                 LobbyControl.Log.LogInfo($"Player {controllerB.playerUsername} has been killed by host");
                 
                 //Client Respawn
-                bufferWriter = startOfRound.__beginSendClientRpc(1279156295U, clientRpcParams, RpcDelivery.Reliable);
-                startOfRound.__endSendClientRpc(ref bufferWriter, 1279156295U, clientRpcParams, RpcDelivery.Reliable);
+                bufferWriter = startOfRound.__beginSendClientRpc(_revivePlayerID!.Value, clientRpcParams, RpcDelivery.Reliable);
+                startOfRound.__endSendClientRpc(ref bufferWriter, _revivePlayerID!.Value, clientRpcParams, RpcDelivery.Reliable);
                 LobbyControl.Log.LogInfo($"Player {controllerB.playerUsername} has been revived on other clients");
             }
             catch (Exception ex)
@@ -98,7 +188,6 @@ namespace LobbyControl.Patches
                 LobbyControl.Log.LogError($"Exception while respawning dead players {ex}");
             }
 
-            ToRespawn.Clear();
         }
 
 

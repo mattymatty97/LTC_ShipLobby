@@ -9,7 +9,9 @@ using System.Threading;
 using GameNetcodeStuff;
 using HarmonyLib;
 using LobbyControl.Dependency;
+using MonoMod.RuntimeDetour;
 using Unity.Netcode;
+using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
 {
@@ -263,7 +265,7 @@ namespace LobbyControl.Patches
             var codes = instructions.ToList();
 
             var fieldInfo = typeof(TransformAndName).GetField(nameof(TransformAndName.name));
-            var methodInfo = typeof(JoinPatches).GetMethod(nameof(JoinPatches.setNewName), BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static);
+            var methodInfo = typeof(JoinPatches).GetMethod(nameof(JoinPatches.SetNewName), BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static);
             
             for (var i = 0; i < codes.Count; i++)
             {
@@ -293,8 +295,38 @@ namespace LobbyControl.Patches
             } 
             return codes;
         }
+        
+        internal static void RegisterMonoModHooks()
+        {
+            LobbyControl.Hooks.Add(new Hook(
+                AccessTools.Method(typeof(StartOfRound),nameof(StartOfRound.StartGame)),
+                MonoModCheckStartRound,
+                new HookConfig(){ Priority = 900}
+            ));
+        }
+        
+        private static void MonoModCheckStartRound(Action<StartOfRound> orig, StartOfRound self)
+        {
+            if (self.IsServer)
+            {
+                if (_currentConnectingPlayer != null || !ConnectionQueue.IsEmpty)
+                {
+                    Object.FindAnyObjectByType<StartMatchLever>().CancelStartGameClientRpc();
+                    HUDManager.Instance.DisplayTip(
+                        "GAME START CANCELLED",
+                        $"{ConnectionQueue.Count + (_currentConnectingPlayer != null ? 1 : 0)} Players Connecting!!",
+                        true);
+                    HUDManager.Instance.AddTextMessageServerRpc(
+                        $"there are still {ConnectionQueue.Count + (_currentConnectingPlayer != null ? 1 : 0)} Players connecting!!\n");
+                    return;
+                }
+            }
 
-        private static void setNewName(int index, string name)
+            orig(self);
+        }
+        
+
+        private static void SetNewName(int index, string name)
         {
             var startOfRound = StartOfRound.Instance;
             var playerObject = startOfRound.allPlayerObjects[index];
