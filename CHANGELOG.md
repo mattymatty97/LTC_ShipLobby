@@ -1,3 +1,12 @@
+## v2.4.4
+- add extra checks to prevent joining while ship is landed
+
+## v2.4.3.5
+- handle Cruiser save/load
+
+## v2.4.3.4
+- use Cecil instead of ReversePatches
+
 ## v2.4.3.3
 - use MonoMod to prevent round Start
 - fix use of KillPlayer for InvisiblePlayerPatch

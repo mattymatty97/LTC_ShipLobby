@@ -543,6 +543,7 @@ Extra:
             LobbyControl.Log.LogDebug("Clearing Lobby");
             LobbyControl.CanSave = true;
             GameNetworkManager.Instance.ResetSavedGameValues();
+            ES3.DeleteFile(GameNetworkManager.Instance.currentSaveFileName);
             LobbyControl.CanSave = LobbyControl.AutoSaveEnabled;
             var res = LoadCommand(ref node, new string[3]);
             if (res)
@@ -601,8 +602,18 @@ Extra:
             var startOfRound = StartOfRound.Instance;
             var terminal = Object.FindObjectOfType<Terminal>();
             //remove all items
-            startOfRound.ResetShipFurniture();
-            startOfRound.ResetPooledObjects(true);
+            startOfRound.ResetShip();
+            
+            //Temporary measure until Zeekers Fix TODO: remove once fix is implemented
+            var objectsByType = Object.FindObjectsOfType<VehicleController>();
+            foreach (var vehicle in objectsByType)
+            {
+                if (vehicle.NetworkObject != null)
+                {
+                    vehicle.NetworkObject.Despawn(false);
+                }
+            }
+            
             var mem = GameNetworkManager.Instance.gameHasStarted;
             GameNetworkManager.Instance.gameHasStarted = false;
             //remove remaining unlockables
@@ -638,6 +649,9 @@ Extra:
             //spawn the new unlockables and update their position
             ReloadUnlockables();
             yield return new WaitForSeconds(0.2f);
+            //spawn in car
+            startOfRound.LoadAttachedVehicle();
+            yield return new WaitForSeconds(0.1f);
             //spawn new items
             startOfRound.LoadShipGrabbableItems();
             yield return new WaitForSeconds(0.1f);

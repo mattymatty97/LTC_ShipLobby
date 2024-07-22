@@ -32,6 +32,13 @@ namespace LobbyControl.Patches
             
             if (!response.Approved)
                 return null;
+
+            if (!StartOfRound.Instance.inShipPhase)
+            {
+                response.Approved = false;
+                response.Reason = "Ship already landed";
+                return null;
+            }
             
             if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
                 return null;
@@ -168,9 +175,9 @@ namespace LobbyControl.Patches
 
         [HarmonyFinalizer]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LateUpdate))]
-        private static void ProcessConnectionQueue()
+        private static void ProcessConnectionQueue(StartOfRound __instance)
         {
-            if (!StartOfRound.Instance.IsServer)
+            if (!__instance.IsServer)
                 return;
             
             if(!Monitor.TryEnter(_lock))
@@ -205,20 +212,39 @@ namespace LobbyControl.Patches
                 }
                 else
                 {
-                    if ((ulong)Environment.TickCount < _currentConnectingExpiration)
-                        return;
-                    
-                    if (ConnectionQueue.TryDequeue(out var response))
+                    if (__instance.inShipPhase)
                     {
+                        if ((ulong)Environment.TickCount < _currentConnectingExpiration)
+                            return;
+
+                        if (!ConnectionQueue.TryDequeue(out var response)) 
+                            return;
+                        
                         if (AsyncLoggerProxy.Enabled)
-                            AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Dequeued remaining:{ConnectionQueue.Count}");
-                        LobbyControl.Log.LogWarning($"Connection request Resumed! remaining: {ConnectionQueue.Count}");
+                            AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue",
+                                $"Player Dequeued remaining:{ConnectionQueue.Count}");
+                        LobbyControl.Log.LogWarning(
+                            $"Connection request Resumed! remaining: {ConnectionQueue.Count}");
                         response.Pending = false;
                         if (!response.Approved)
                             return;
                         _currentConnectingPlayerConfirmations = new bool[2];
                         _currentConnectingPlayer = 0L;
                         _currentConnectingExpiration = (ulong)Environment.TickCount + 1000UL;
+                    }
+                    else
+                    {
+                        if (ConnectionQueue.IsEmpty) 
+                            return;
+                        
+                        foreach (var approvalResponse in ConnectionQueue)
+                        {
+                            approvalResponse.Approved = false;
+                            approvalResponse.Reason = "ship has landed!";
+                            approvalResponse.Pending = false;
+                        }
+
+                        ConnectionQueue.Clear();
                     }
                 }
             }
@@ -309,15 +335,17 @@ namespace LobbyControl.Patches
         {
             if (self.IsServer)
             {
-                if (_currentConnectingPlayer != null || !ConnectionQueue.IsEmpty)
+                LobbyControl.Log.LogWarning("Attempting Game start!");
+                if (_currentConnectingPlayer.HasValue || !ConnectionQueue.IsEmpty)
                 {
+                    var count = ConnectionQueue.Count + (_currentConnectingPlayer.HasValue ? 1 : 0);
                     Object.FindAnyObjectByType<StartMatchLever>().CancelStartGameClientRpc();
                     HUDManager.Instance.DisplayTip(
                         "GAME START CANCELLED",
-                        $"{ConnectionQueue.Count + (_currentConnectingPlayer != null ? 1 : 0)} Players Connecting!!",
+                        $"{count} Players Connecting!!",
                         true);
                     HUDManager.Instance.AddTextMessageServerRpc(
-                        $"there are still {ConnectionQueue.Count + (_currentConnectingPlayer != null ? 1 : 0)} Players connecting!!\n");
+                        $"there are still {count} Players connecting!!\n");
                     return;
                 }
             }

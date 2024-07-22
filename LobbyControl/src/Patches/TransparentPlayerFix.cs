@@ -122,7 +122,7 @@ internal class TransparentPlayerFix
 
         var objectId = startOfRound.ClientPlayerList[clientID];
 
-        if (!controllerB!.IsServer || !ToRespawn.Contains(objectId))
+        if (!startOfRound.IsServer || !ToRespawn.Contains(objectId))
             return;
 
         ToRespawn.Remove(objectId);
