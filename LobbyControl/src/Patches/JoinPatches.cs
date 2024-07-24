@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -11,6 +12,8 @@ using HarmonyLib;
 using LobbyControl.Dependency;
 using MonoMod.RuntimeDetour;
 using Unity.Netcode;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
@@ -56,7 +59,7 @@ namespace LobbyControl.Patches
         private static readonly object _lock = new object();
         private static ulong? _currentConnectingPlayer = null;
         private static ulong _currentConnectingExpiration = 0;
-        private static bool[] _currentConnectingPlayerConfirmations = new bool[2];
+        private static readonly bool[] _currentConnectingPlayerConfirmations = [false, false];
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientConnect))]
@@ -66,7 +69,8 @@ namespace LobbyControl.Patches
             {
                 if (__instance.IsServer && LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
                 {
-                    _currentConnectingPlayerConfirmations = new bool[2];
+                    _currentConnectingPlayerConfirmations[0] = false;
+                    _currentConnectingPlayerConfirmations[1] = false;
                     _currentConnectingPlayer = clientId;
                     _currentConnectingExpiration = (ulong)(Environment.TickCount +
                                                    LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value);
@@ -95,14 +99,14 @@ namespace LobbyControl.Patches
             LobbyControl.Log.LogInfo($"{clientId} disconnected");
             lock (_lock)
             {
-                if (_currentConnectingPlayer == clientId)
-                {                    
-                    if (AsyncLoggerProxy.Enabled)
-                        AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Disconnected!");
+                if (_currentConnectingPlayer != clientId) 
+                    return;
+                
+                if (AsyncLoggerProxy.Enabled)
+                    AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Disconnected!");
 
-                    _currentConnectingPlayer = null;
-                    _currentConnectingExpiration = 0;
-                }
+                _currentConnectingPlayer = null;
+                _currentConnectingExpiration = 0;
             }
         }
 
@@ -212,6 +216,7 @@ namespace LobbyControl.Patches
                 }
                 else
                 {
+                    
                     if (__instance.inShipPhase)
                     {
                         if ((ulong)Environment.TickCount < _currentConnectingExpiration)
@@ -228,7 +233,8 @@ namespace LobbyControl.Patches
                         response.Pending = false;
                         if (!response.Approved)
                             return;
-                        _currentConnectingPlayerConfirmations = new bool[2];
+                        _currentConnectingPlayerConfirmations[0] = false;
+                        _currentConnectingPlayerConfirmations[1] = false;
                         _currentConnectingPlayer = 0L;
                         _currentConnectingExpiration = (ulong)Environment.TickCount + 1000UL;
                     }
@@ -264,7 +270,8 @@ namespace LobbyControl.Patches
         {
             lock (_lock)
             {
-                _currentConnectingPlayerConfirmations = new bool[2];
+                _currentConnectingPlayerConfirmations[0] = false;
+                _currentConnectingPlayerConfirmations[1] = false;
                 _currentConnectingPlayer = null;
                 _currentConnectingExpiration = 0UL;
                 if (ConnectionQueue.Count > 0)
@@ -322,38 +329,61 @@ namespace LobbyControl.Patches
             return codes;
         }
         
-        internal static void RegisterMonoModHooks()
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.StartGameServerRpc))]
+        private static bool CheckValidStart(StartOfRound __instance)
         {
-            LobbyControl.Hooks.Add(new Hook(
-                AccessTools.Method(typeof(StartOfRound),nameof(StartOfRound.StartGame)),
-                MonoModCheckStartRound,
-                new HookConfig(){ Priority = 900}
-            ));
+            var networkManager = __instance.NetworkManager;
+            if (networkManager == null || !networkManager.IsListening)
+                return true;
+            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server || !networkManager.IsServer && !networkManager.IsHost)
+                return true;
+            if (CanStartGame())
+                return true;
+            var count = ConnectionQueue.Count + (_currentConnectingPlayer.HasValue ? 1 : 0);
+            Object.FindAnyObjectByType<StartMatchLever>().CancelStartGameClientRpc();
+            HUDManager.Instance.DisplayTip(
+                "GAME START CANCELLED",
+                $"{count} Players Connecting!!",
+                true);
+            HUDManager.Instance.AddTextMessageServerRpc(
+                $"there are still {count} Players connecting!!\n");
+            return false;
         }
         
-        private static void MonoModCheckStartRound(Action<StartOfRound> orig, StartOfRound self)
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartMatchLever), nameof(StartMatchLever.StartGame))]
+        private static bool CheckValidStart(StartMatchLever __instance)
         {
-            if (self.IsServer)
-            {
-                LobbyControl.Log.LogWarning("Attempting Game start!");
-                if (_currentConnectingPlayer.HasValue || !ConnectionQueue.IsEmpty)
-                {
-                    var count = ConnectionQueue.Count + (_currentConnectingPlayer.HasValue ? 1 : 0);
-                    Object.FindAnyObjectByType<StartMatchLever>().CancelStartGameClientRpc();
-                    HUDManager.Instance.DisplayTip(
-                        "GAME START CANCELLED",
-                        $"{count} Players Connecting!!",
-                        true);
-                    HUDManager.Instance.AddTextMessageServerRpc(
-                        $"there are still {count} Players connecting!!\n");
-                    return;
-                }
-            }
+            if (!__instance.IsServer)
+                return true;
+            
+            if (__instance.playersManager.travellingToNewLevel || !__instance.playersManager.inShipPhase || __instance.playersManager.connectedPlayersAmount + 1 <= 1 && !__instance.singlePlayerEnabled)
+                return true;
+            
+            if (__instance.playersManager.fullyLoadedPlayers.Count <
+                __instance.playersManager.connectedPlayersAmount + 1)
+                return true;
+            
+            if (CanStartGame())
+                return true;
+            
+            var count = ConnectionQueue.Count + (_currentConnectingPlayer.HasValue ? 1 : 0);
+            __instance.CancelStartGame();
+            HUDManager.Instance.DisplayTip(
+                "GAME START CANCELLED",
+                $"{count} Players Connecting!!",
+                true);
+            HUDManager.Instance.AddTextMessageServerRpc(
+                $"there are still {count} Players connecting!!\n");
+            return false;
+        }
 
-            orig(self);
+        private static bool CanStartGame()
+        {
+            return !_currentConnectingPlayer.HasValue && ConnectionQueue.IsEmpty;
         }
         
-
         private static void SetNewName(int index, string name)
         {
             var startOfRound = StartOfRound.Instance;
