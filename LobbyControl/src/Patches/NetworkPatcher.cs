@@ -22,7 +22,7 @@ namespace LobbyControl.Patches
         private static IEnumerable<CodeInstruction> FixConnectionApprovalPrefix(
             IEnumerable<CodeInstruction> instructions)
         {
-            var gameStartedField = typeof(GameNetworkManager).GetField(nameof(GameNetworkManager.gameHasStarted));
+            var gameStartedField = AccessTools.Field(typeof(GameNetworkManager),nameof(GameNetworkManager.gameHasStarted));
             List<CodeInstruction> code = instructions.ToList();
 
             for (var index = 0; index < code.Count; index++)

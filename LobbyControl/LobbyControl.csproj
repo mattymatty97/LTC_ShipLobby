@@ -4,7 +4,7 @@
         <RootNamespace>LobbyControl</RootNamespace>
         <AssemblyName>LobbyControl</AssemblyName>
         <Product>Lobby Control</Product>
-        <Version>2.4.4</Version>
+        <Version>2.4.5</Version>
         <TargetFramework>netstandard2.1</TargetFramework>
         <LangVersion>Latest</LangVersion>
     </PropertyGroup>
@@ -33,8 +33,8 @@
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AnimationModule.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.PhysicsModule.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AudioModule.dll" Publicize="false"/>
-        <Reference Include="..\Dependencies\ReservedItemSlotCore.dll" Publicize="false"/>
-        <Reference Include="..\Dependencies\AsyncLoggers.dll" Publicize="false"/>
+        <Reference Include="$(SolutionDir)\Dependencies\ReservedItemSlotCore.dll" Publicize="false"/>
+        <Reference Include="$(SolutionDir)\Dependencies\AsyncLoggers.dll" Publicize="false"/>
     </ItemGroup>
     <Import Project="PostBuildEvents.targets"/>
 	<!-- Embedded Debug -->

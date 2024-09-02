@@ -8,6 +8,7 @@ using HarmonyLib.Public.Patching;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Utils;
+using Steamworks;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -57,53 +58,20 @@ internal class TransparentPlayerFix
     {
         if (!_killPlayerID.HasValue)
         {
-            var methodInfo = typeof(PlayerControllerB).GetMethod("KillPlayerClientRpc",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            var instructions = methodInfo.GetMethodPatcher().CopyOriginal().Definition.Body.Instructions;
-
-            uint tmp = 0;
-            for (var i = 0; i < instructions.Count; i++)
-            {
-                if (instructions[i].OpCode == OpCodes.Ldc_I4 && instructions[i - 1].OpCode == OpCodes.Ldarg_0)
-                    tmp = (uint)(int)instructions[i].Operand;
-
-                if (instructions[i].OpCode != OpCodes.Call ||
-                    instructions[i].Operand is not MethodReference operand ||
-                    !operand.Is(typeof(NetworkBehaviour), nameof(NetworkBehaviour.__beginSendClientRpc)
-                    ))
-                    continue;
-
-                _killPlayerID = tmp;
-                LobbyControl.Log.LogDebug($"KillPlayerClientRpc Id found: {_killPlayerID}U");
-                break;
-            }
+            var methodInfo =
+                AccessTools.Method(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayerClientRpc));
+            
+            Utils.TryGetRpcID(methodInfo, out var id);
+            _killPlayerID = id;
+            
         }
-
 
         if (!_revivePlayerID.HasValue)
         {
-            var methodInfo =
-                typeof(StartOfRound).GetMethod("Debug_ReviveAllPlayersClientRpc", BindingFlags.Instance | BindingFlags.Public);
+            var methodInfo = AccessTools.Method(typeof(StartOfRound),nameof(StartOfRound.Debug_ReviveAllPlayersClientRpc));
 
-            var instructions = methodInfo.GetMethodPatcher().CopyOriginal().Definition.Body.Instructions;
-
-            uint tmp = 0;
-            for (var i = 0; i < instructions.Count; i++)
-            {
-                if (instructions[i].OpCode == OpCodes.Ldc_I4 && instructions[i - 1].OpCode == OpCodes.Ldarg_0)
-                    tmp = (uint)(int)instructions[i].Operand;
-
-                if (instructions[i].OpCode != OpCodes.Call ||
-                    instructions[i].Operand is not MethodReference operand ||
-                    !operand.Is(typeof(NetworkBehaviour), nameof(NetworkBehaviour.__beginSendClientRpc)
-                    ))
-                    continue;
-
-                _revivePlayerID = tmp;
-                LobbyControl.Log.LogDebug($"Debug_ReviveAllPlayersClientRpc Id found: {_revivePlayerID}U");
-                break;
-            }
+            Utils.TryGetRpcID(methodInfo, out var id);
+            _revivePlayerID = id;
         }
     }
 
@@ -132,7 +100,31 @@ internal class TransparentPlayerFix
 
         try
         {
-            var rpcList = startOfRound.ClientPlayerList.Keys.ToList();
+            
+            if (!GameNetworkManager.Instance.disableSteam && !NetworkManager.Singleton.IsServer)
+            {
+                // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                SteamFriends.GetFriends().ToList<Friend>();
+            } 
+            
+            var rpcList = startOfRound.ClientPlayerList.Keys.Where(id =>
+            {
+                if (GameNetworkManager.Instance.disableSteam || NetworkManager.Singleton.IsServer) 
+                    return true;
+                
+                if (startOfRound.ClientPlayerList.TryGetValue(id, out var index))
+                {
+                    var playerObject = startOfRound.allPlayerScripts[index];
+                        
+                    var friend = new Friend(playerObject.playerSteamId);
+                    if (friend.IsFriend)
+                        return true;
+                }
+                
+                return false;
+            }).ToList();
+            
+
             rpcList.Remove(clientID);
             rpcList.Remove(NetworkManager.Singleton.LocalClientId);
 

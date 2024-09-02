@@ -27,9 +27,11 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.4.4";
+        public const string VERSION = "2.4.5";
 
         internal static ManualLogSource Log;
+
+        internal static Harmony _harmony;
 
         public static bool CanModifyLobby = true;
 
@@ -82,8 +84,9 @@ namespace LobbyControl
                     CommandManager.Initialize();
                     
                     Log.LogInfo("Patching Methods");
-                    var harmony = new Harmony(GUID);
-                    harmony.PatchAll(Assembly.GetExecutingAssembly());
+                    _harmony = new Harmony(GUID);
+                    _harmony.PatchAll(Assembly.GetExecutingAssembly());
+                    JoinPatches.Init();
                     TransparentPlayerFix.Init();
                     
                     Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
@@ -101,6 +104,7 @@ namespace LobbyControl
             internal static void Init(BaseUnityPlugin plugin)
             {
                 var config = plugin.Config;
+                config.SaveOnConfigSet = false;
                 //Initialize Configs
                 //ItemSync
                 ItemSync.GhostItems = config.Bind("ItemSync","ghost_items",true

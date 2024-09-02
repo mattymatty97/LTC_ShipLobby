@@ -1,3 +1,7 @@
+## v2.4.5
+- make some patches future-proof
+- try use MonoMod to prevent Pulling the lever if a player is in queue
+
 ## v2.4.4
 - add extra checks to prevent joining while ship is landed
 
