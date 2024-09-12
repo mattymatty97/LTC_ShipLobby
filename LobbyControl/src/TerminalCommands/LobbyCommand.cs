@@ -8,6 +8,7 @@ using BepInEx;
 using LobbyControl.Dependency;
 using LobbyControl.Patches;
 using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -37,7 +38,26 @@ Saving:
 Extra:
 - dropall       : drop all items to the ground
 ";
-        
+
+        private const string DefaultTextLAN =
+@"- status        : prints the current lobby status
+
+LAN:
+- open          : set the lobby to be discoverable
+- close         : set the lobby to be non-discoverable
+- rename [name] : change the name of the lobby
+
+Saving:
+- autosave      : toggle autosave for the savefile
+- save (name)   : save the lobby
+- load (name)   : load a savefile
+- switch (name) : swap savefile without loading it
+- clear         : reset the current lobby to empty
+
+Extra:
+- dropall       : drop all items to the ground
+";
+
         public override bool IsCommand(string[] args)
         {
             return GameNetworkManager.Instance.isHostingGame && args[0].Trim().ToLower() == "lobby";
@@ -242,23 +262,37 @@ Extra:
         private static bool StatusCommand(ref TerminalNode node, string[] args)
         {
             var manager = GameNetworkManager.Instance;
-            if (!manager.currentLobby.HasValue)
+
+            var status = false;
+            string visibility;
+            var name = manager.steamLobbyName;
+
+            if (manager.disableSteam)
+            {
+                UnityTransport unityTransport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+                visibility = (unityTransport.ConnectionData.ServerListenAddress == "0.0.0.0") ? "Public" : "Private";
+            }
+            else if (!manager.currentLobby.HasValue)
             {
                 node.displayText = "Failed to fetch lobby ( was null )\n\n";
                 return false;
             }
+            else
+            {
+                var lobby = manager.currentLobby.Value;
+                status = LobbyPatcher.IsOpen(lobby);
+                visibility = LobbyPatcher.GetVisibility(lobby).ToString();
+                name = lobby.GetData("name");
+            }
 
-            var lobby = manager.currentLobby.Value;
-            var status = LobbyPatcher.IsOpen(lobby);
-            var visibility = LobbyPatcher.GetVisibility(lobby);
-            var name = lobby.GetData("name");
             var autoSave = LobbyControl.CanSave;
 
             var builder = new StringBuilder("Lobby Status:");
             builder.Append("\n- File is '").Append(manager.currentSaveFileName).Append("'");
             builder.Append("\n- Name is '").Append(name).Append("'");
-            builder.Append("\n- Status is ").Append(status ? "Open" : "Closed");
-            builder.Append("\n- Visibility is ").Append(visibility.ToString());
+            if (!manager.disableSteam)
+                builder.Append("\n- Status is ").Append(status ? "Open" : "Closed");
+            builder.Append("\n- Visibility is ").Append(visibility);
             builder.Append("\n- Saving is ").Append(autoSave ? "Automatic" : "Manual");
             builder.Append("\n\n");
             node.displayText = builder.ToString();
@@ -270,7 +304,18 @@ Extra:
         {
             LobbyControl.Log.LogDebug("Reopening lobby, setting to joinable.");
             var manager = GameNetworkManager.Instance;
-            if (!manager.currentLobby.HasValue)
+            if (manager.disableSteam)
+            {
+                UnityTransport unityTransport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+                if (unityTransport.ConnectionData.ServerListenAddress != "0.0.0.0")
+                {
+                    node.displayText = "Server is limited to local connections\n\n";
+                    return false;
+                }
+                manager.lobbyHostSettings.isLobbyPublic = true;
+                ES3.Save<bool>("HostSettings_Public", manager.lobbyHostSettings.isLobbyPublic, "LCGeneralSaveData");
+            }
+            else if (!manager.currentLobby.HasValue)
             {
                 node.displayText = "Failed to fetch lobby ( was null )\n\n";
                 return false;
@@ -294,7 +339,18 @@ Extra:
         {
             LobbyControl.Log.LogDebug("Closing lobby, setting to not joinable.");
             var manager = GameNetworkManager.Instance;
-            if (!manager.currentLobby.HasValue)
+            if (manager.disableSteam)
+            {
+                UnityTransport unityTransport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+                if (unityTransport.ConnectionData.ServerListenAddress != "0.0.0.0")
+                {
+                    node.displayText = "Server is limited to local connections\n\n";
+                    return false;
+                }
+                manager.lobbyHostSettings.isLobbyPublic = false;
+                ES3.Save<bool>("HostSettings_Public", manager.lobbyHostSettings.isLobbyPublic, "LCGeneralSaveData");
+            }
+            else if (!manager.currentLobby.HasValue)
             {
                 node.displayText = "Failed to fetch lobby ( was null )\n\n";
                 return false;
@@ -324,8 +380,9 @@ Extra:
                 return false;
             }
 
+            ES3.Save<bool>("HostSettings_Public", false, "LCGeneralSaveData");
             manager.currentLobby.Value.SetPrivate();
-            
+
             if (AsyncLoggerProxy.Enabled)
                 AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Visibility", "Private");
 
@@ -346,7 +403,7 @@ Extra:
                 return false;
             }
 
-            manager.currentLobby.Value.SetPrivate();
+            ES3.Save<bool>("HostSettings_Public", false, "LCGeneralSaveData");
             manager.currentLobby.Value.SetFriendsOnly();
 
             var outText = "Lobby is now Friends Only";
@@ -366,10 +423,11 @@ Extra:
                 return false;
             }
 
+            ES3.Save<bool>("HostSettings_Public", true, "LCGeneralSaveData");
             manager.currentLobby.Value.SetPublic();
+
             var outText = "Lobby is now Public";
             LobbyControl.Log.LogInfo(outText);
-
             node.displayText = outText + "\n\n";
             node.maxCharactersToType = node.displayText.Length + 2;
             return true;
@@ -389,16 +447,16 @@ Extra:
 
             LobbyControl.Log.LogDebug("Renaming lobby: \"" + remaining + "\"");
             var manager = GameNetworkManager.Instance;
-            if (!manager.currentLobby.HasValue)
+            if (!manager.disableSteam && !manager.currentLobby.HasValue)
             {
                 node.displayText = "Failed to fetch lobby ( was null )\n\n";
                 return false;
             }
 
             manager.lobbyHostSettings.lobbyName = remaining;
-            manager.currentLobby.Value.SetData("name", manager.lobbyHostSettings.lobbyName);
-            manager.steamLobbyName = manager.currentLobby.Value.GetData("name");
-
+            manager.steamLobbyName = manager.lobbyHostSettings.lobbyName;
+            if (manager.currentLobby.HasValue)
+                manager.currentLobby.Value.SetData("name", manager.steamLobbyName);
             ES3.Save<string>("HostSettings_Name", manager.steamLobbyName, "LCGeneralSaveData");
 
             var outText = "Lobby renamed to \"" + remaining + "\"";
@@ -587,7 +645,7 @@ Extra:
         private static TerminalNode HelpNode()
         {
             var node = ScriptableObject.CreateInstance<TerminalNode>();
-            node.displayText = DefaultText;
+            node.displayText = GameNetworkManager.Instance.disableSteam ? DefaultTextLAN : DefaultText;
             node.clearPreviousText = true;
             node.maxCharactersToType = node.displayText.Length + 2;
             return node;
