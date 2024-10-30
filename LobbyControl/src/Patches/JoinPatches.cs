@@ -76,7 +76,7 @@ internal class JoinPatches
             return null;
 
         //if we're already landing
-        if (!isLanding)
+        if (isLanding)
         {
             LobbyControl.Log.LogDebug("connection refused ( ship was landed ).");
             response.Reason = "Ship has already landed!";
