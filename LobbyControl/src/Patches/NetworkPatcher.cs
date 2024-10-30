@@ -1,98 +1,13 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
 using HarmonyLib;
-using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
-using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
     internal class NetworkPatcher
     {
-
-        /// <summary>
-        ///     Do not check for gameHasStarted.
-        /// </summary>
-        [HarmonyTranspiler]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        private static IEnumerable<CodeInstruction> FixConnectionApprovalPrefix(
-            IEnumerable<CodeInstruction> instructions)
-        {
-            var gameStartedField = AccessTools.Field(typeof(GameNetworkManager),nameof(GameNetworkManager.gameHasStarted));
-            List<CodeInstruction> code = instructions.ToList();
-
-            for (var index = 0; index < code.Count; index++)
-            {
-                var curr = code[index];
-                if (curr.LoadsField(gameStartedField))
-                {
-                    var next = code[index + 1];
-                    var prec = code[index - 1];
-                    if (next.Branches(out Label? dest))
-                    {
-                        code[index - 1] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = prec.labels,
-                            blocks = prec.blocks
-                        };
-                        code[index] = new CodeInstruction(OpCodes.Nop)
-                        {
-                            labels = curr.labels,
-                            blocks = curr.blocks
-                        };
-                        code[index + 1] = new CodeInstruction(OpCodes.Br, dest)
-                        {
-                            labels = next.labels,
-                            blocks = next.blocks
-                        };
-                        LobbyControl.Log.LogDebug("Patched ConnectionApproval!!");
-                        break;
-                    }
-                }
-            }
-
-            return code;
-        }
-
-
-        /// <summary>
-        ///     Check extra parameters before accepting the connection.
-        /// </summary>
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        [HarmonyPriority(20)]
-        private static void FixConnectionApprovalPostFix(GameNetworkManager __instance, bool __runOriginal,
-            NetworkManager.ConnectionApprovalResponse response)
-        {
-            if (!__runOriginal || !response.Approved)
-                return;
-
-            //if we're allowing late connections log it
-            if (__instance.gameHasStarted && response.Approved && __instance.currentLobby.HasValue &&
-                LobbyPatcher.IsOpen(__instance.currentLobby.Value))
-            {
-                LobbyControl.Log.LogDebug("Approving incoming late connection.");
-            }
-            //if not give them a valid reason
-            else if (!LobbyControl.CanModifyLobby)
-            {
-                LobbyControl.Log.LogDebug("Late connection refused ( ship was landed ).");
-                response.Reason = "Ship has already landed!";
-                response.Approved = false;
-            }
-            else if (!__instance.disableSteam &&
-                     (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value)))
-            {
-                LobbyControl.Log.LogDebug("Late connection refused ( lobby was closed ).");
-                response.Reason = "Lobby has been closed!";
-                response.Approved = false;
-            }
-        }
-
         /// <summary>
         ///     Make the friend invite button work again once we open the lobby.
         /// </summary>
@@ -131,7 +46,7 @@ namespace LobbyControl.Patches
         {
             if (!__runOriginal)
                 return;
-            
+
             if (__instance.IsServer && __instance.inShipPhase)
             {
                 LobbyControl.Log.LogDebug("Setting lobby to not joinable.");
@@ -199,17 +114,16 @@ namespace LobbyControl.Patches
                 Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
             }
         }
-        
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
-        private static void ResetDcFlags(StartOfRound __instance, ulong clientId, 
+        private static void ResetDcFlags(StartOfRound __instance, ulong clientId,
             int assignedPlayerObjectId)
         {
-            var controllerB = __instance.allPlayerScripts[assignedPlayerObjectId]; 
+            var controllerB = __instance.allPlayerScripts[assignedPlayerObjectId];
             controllerB.disconnectedMidGame = false;
             //re-enable the player model ( typically needed for back-filling players )
             controllerB.DisablePlayerModel(controllerB.gameObject, true, true);
         }
-        
     }
 }

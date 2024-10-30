@@ -20,6 +20,7 @@ namespace LobbyControl.Patches
         }
 
         private const string COMMAND = "\n\n>LOBBY [command] (lobby name)\ntype lobby help for more info.\n\n";
+
         private static void OverrideHelpTerminalNode(TerminalNodesList terminalNodes)
         {
             TerminalNode node = null;
@@ -28,12 +29,12 @@ namespace LobbyControl.Patches
                 if (keyword.word == "other")
                     node = keyword.specialKeywordResult;
             }
-            
+
             if (node is null)
                 return;
-            
+
             var defaultMessage = node.displayText;
-            string message = defaultMessage.Replace(COMMAND,"").Trim();
+            string message = defaultMessage.Replace(COMMAND, "").Trim();
             if (GameNetworkManager.Instance.isHostingGame)
                 message += COMMAND;
             else
@@ -43,13 +44,14 @@ namespace LobbyControl.Patches
 
         [HarmonyPatch(typeof(Terminal), nameof(Terminal.ParsePlayerSentence))]
         [HarmonyPrefix]
-        private static bool ParsePlayerSentencePatch(ref Terminal __instance, ref TerminalNode __result, bool __runOriginal)
+        private static bool ParsePlayerSentencePatch(ref Terminal __instance, ref TerminalNode __result,
+            bool __runOriginal)
         {
             if (!__runOriginal)
                 return false;
-            
+
             string[] array = __instance.screenText.text
-                .Substring(__instance.screenText.text.Length - __instance.textAdded).Split(' ');
+                .Substring(__instance.screenText.text.Length - __instance.textAdded).Split(' ', 3);
 
             if (CommandManager.TryExecuteCommand(array, out TerminalNode terminalNode))
             {
@@ -65,21 +67,21 @@ namespace LobbyControl.Patches
 
             return true;
         }
-        
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Terminal), nameof(Terminal.QuitTerminal))]
         static void QuitTerminalPatch()
         {
             CommandManager.OnTerminalQuit();
         }
-        
+
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnLocalDisconnect))]
         [HarmonyPrefix]
         static void OnLocalDisconnectPatch()
         {
             CommandManager.OnLocalDisconnect();
         }
-        
+
         internal static TerminalNode CreateTerminalNode(string message, bool clearPreviousText = true)
         {
             TerminalNode terminalNode = ScriptableObject.CreateInstance<TerminalNode>();

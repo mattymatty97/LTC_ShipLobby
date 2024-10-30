@@ -2,10 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using BepInEx;
-using LobbyControl.Dependency;
 using LobbyControl.Patches;
 using Unity.Netcode;
 using UnityEngine;
@@ -13,11 +11,10 @@ using Object = UnityEngine.Object;
 
 namespace LobbyControl.TerminalCommands
 {
-    public class LobbyCommand: Command
+    public class LobbyCommand : Command
     {
-        
-        private const string DefaultText = 
-@"- status        : prints the current lobby status
+        private const string DefaultText =
+            @"- status        : prints the current lobby status
 
 Steam:
 - open          : open the lobby
@@ -37,7 +34,7 @@ Saving:
 Extra:
 - dropall       : drop all items to the ground
 ";
-        
+
         public override bool IsCommand(string[] args)
         {
             return GameNetworkManager.Instance.isHostingGame && args[0].Trim().ToLower() == "lobby";
@@ -62,9 +59,9 @@ Extra:
                     }
                     case "open":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
-                        
+
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
@@ -76,9 +73,9 @@ Extra:
                     }
                     case "close":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
-                        
+
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
@@ -90,9 +87,9 @@ Extra:
                     }
                     case "private":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
-                        
+
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
@@ -104,9 +101,9 @@ Extra:
                     }
                     case "friend":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
-                        
+
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
@@ -118,9 +115,9 @@ Extra:
                     }
                     case "public":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
-                        
+
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
@@ -132,7 +129,7 @@ Extra:
                     }
                     case "rename":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
 
                         if (!LobbyControl.CanModifyLobby)
@@ -140,7 +137,7 @@ Extra:
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
-                        
+
                         RenameCommand(ref node, args);
                         break;
                     }
@@ -150,8 +147,8 @@ Extra:
                         break;
                     }
                     case "save":
-                    {                        
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                    {
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
 
                         if (!LobbyControl.CanModifyLobby)
@@ -159,13 +156,13 @@ Extra:
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
-                        
+
                         SaveCommand(ref node, args);
                         break;
                     }
                     case "load":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
 
                         if (!LobbyControl.CanModifyLobby)
@@ -173,13 +170,13 @@ Extra:
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
-                        
+
                         LoadCommand(ref node, args);
                         break;
                     }
                     case "switch":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
 
                         if (!LobbyControl.CanModifyLobby)
@@ -187,13 +184,13 @@ Extra:
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
-                        
+
                         SwitchCommand(ref node, args);
                         break;
                     }
                     case "clear":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
 
                         if (!LobbyControl.CanModifyLobby)
@@ -201,13 +198,13 @@ Extra:
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
-                        
+
                         ClearCommand(ref node, args);
                         break;
                     }
                     case "dropall":
                     {
-                        if (PerformOrbitCheck(node, out var errorText)) 
+                        if (PerformOrbitCheck(node, out var errorText))
                             return errorText;
 
                         if (!LobbyControl.CanModifyLobby)
@@ -215,7 +212,7 @@ Extra:
                             node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
-                        
+
                         DropAllCommand(ref node, args);
                         break;
                     }
@@ -277,7 +274,7 @@ Extra:
             }
 
             manager.SetLobbyJoinable(true);
-                        
+
             // Restore the friend invite button in the ESC menu.
             Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
 
@@ -301,7 +298,7 @@ Extra:
             }
 
             manager.SetLobbyJoinable(false);
-       
+
             // Hide the friend invite button in the ESC menu.
             Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 0f;
 
@@ -325,9 +322,6 @@ Extra:
             }
 
             manager.currentLobby.Value.SetPrivate();
-            
-            if (AsyncLoggerProxy.Enabled)
-                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Visibility", "Private");
 
             var outText = "Lobby is now Private";
             LobbyControl.Log.LogInfo(outText);
@@ -414,10 +408,6 @@ Extra:
             LobbyControl.Log.LogDebug("Toggling AutoSave");
 
             LobbyControl.CanSave = LobbyControl.AutoSaveEnabled = !LobbyControl.AutoSaveEnabled;
-            
-            
-            if (AsyncLoggerProxy.Enabled)
-                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Autosave", LobbyControl.CanSave.ToString());
 
             var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
 
@@ -430,7 +420,6 @@ Extra:
 
         private static bool SaveCommand(ref TerminalNode node, string[] args)
         {
-
             if (StartOfRound.Instance.isChallengeFile)
             {
                 node.displayText = "Cannot Edit Challenge Save\n\n";
@@ -486,22 +475,19 @@ Extra:
             }
 
             var outText = "Lobby \'" + manager.currentSaveFileName + "\' loaded";
-                        
+
             StartOfRound.Instance.StartCoroutine(LoadLobbyCoroutine());
             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                 GameNetworkManager.Instance.currentSaveFileName, true);
-            
-            if (AsyncLoggerProxy.Enabled)
-                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Autosave", LobbyControl.CanSave.ToString());
-            
+
             LobbyControl.Log.LogInfo(outText);
 
             node.displayText = outText + "\n\n";
             node.maxCharactersToType = node.displayText.Length + 2;
             return true;
         }
-        
-        
+
+
         private static bool SwitchCommand(ref TerminalNode node, string[] args)
         {
             if (StartOfRound.Instance.isChallengeFile)
@@ -518,15 +504,15 @@ Extra:
                 node.displayText = "You need to specify a destination for the swap!";
                 return false;
             }
-            
+
             var remaining = args[2];
             if (remaining.Length > 20)
                 remaining = remaining.Substring(0, 20);
-            
+
             manager.currentSaveFileName = remaining;
-            
+
             var outText = "Lobby is now saving to \'" + manager.currentSaveFileName + "\'";
-            
+
             node.displayText = outText + "\n\n";
             node.maxCharactersToType = node.displayText.Length + 2;
             return true;
@@ -539,7 +525,7 @@ Extra:
                 node.displayText = "Cannot Edit Challenge Save\n\n";
                 return false;
             }
-            
+
             LobbyControl.Log.LogDebug("Clearing Lobby");
             LobbyControl.CanSave = true;
             GameNetworkManager.Instance.ResetSavedGameValues();
@@ -550,6 +536,7 @@ Extra:
             {
                 node.displayText = "Lobby is now Empty!";
             }
+
             return res;
         }
 
@@ -583,7 +570,7 @@ Extra:
             errorText = null;
             return false;
         }
-        
+
         private static TerminalNode HelpNode()
         {
             var node = ScriptableObject.CreateInstance<TerminalNode>();
@@ -592,18 +579,15 @@ Extra:
             node.maxCharactersToType = node.displayText.Length + 2;
             return node;
         }
-        
+
         // ReSharper disable Unity.PerformanceAnalysis
         private static IEnumerator LoadLobbyCoroutine()
         {
-            if (AsyncLoggerProxy.Enabled)
-                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Load", $"Starting {GameNetworkManager.Instance.currentSaveFileName}");
-
             var startOfRound = StartOfRound.Instance;
             var terminal = Object.FindObjectOfType<Terminal>();
             //remove all items
             startOfRound.ResetShip();
-            
+
             //Temporary measure until Zeekers Fix TODO: remove once fix is implemented
             var objectsByType = Object.FindObjectsOfType<VehicleController>();
             foreach (var vehicle in objectsByType)
@@ -613,23 +597,24 @@ Extra:
                     vehicle.NetworkObject.Despawn(false);
                 }
             }
-            
+
             var mem = GameNetworkManager.Instance.gameHasStarted;
             GameNetworkManager.Instance.gameHasStarted = false;
             //remove remaining unlockables
             foreach (var unlockable in StartOfRound.Instance.SpawnedShipUnlockables.ToList())
             {
                 var itemEntry = startOfRound.unlockablesList.unlockables[unlockable.Key];
-                if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
+                if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab)
                     continue;
-                
-                if(unlockable.Value == null)
+
+                if (unlockable.Value == null)
                     continue;
-                
+
                 NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
                 if (component != null && component.IsSpawned)
                     component.Despawn();
             }
+
             startOfRound.SpawnedShipUnlockables.Clear();
             startOfRound.suitsPlaced = 0;
             GameNetworkManager.Instance.ResetUnlockablesListValues();
@@ -645,7 +630,8 @@ Extra:
             {
                 //send the updated misc variables to the players
                 RefreshLobby();
-            }   
+            }
+
             //spawn the new unlockables and update their position
             ReloadUnlockables();
             yield return new WaitForSeconds(0.2f);
@@ -661,11 +647,8 @@ Extra:
                 //sync item variables
                 startOfRound.SyncShipUnlockablesServerRpc();
             }
-            
+
             GameNetworkManager.Instance.gameHasStarted = mem;
-            
-            if (AsyncLoggerProxy.Enabled)
-                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Load", $"Finshed {GameNetworkManager.Instance.currentSaveFileName}");
         }
 
         private static void ReloadUnlockables()
@@ -678,7 +661,9 @@ Extra:
                 //8 - cabinet
                 //15 - beds
                 //16 - terminal
-                for (var baseUnlockable = 0; baseUnlockable < startOfRound.unlockablesList.unlockables.Count; baseUnlockable++)
+                for (var baseUnlockable = 0;
+                     baseUnlockable < startOfRound.unlockablesList.unlockables.Count;
+                     baseUnlockable++)
                 {
                     var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
                     if (unlockable.alreadyUnlocked)
@@ -688,13 +673,13 @@ Extra:
                             startOfRound.SpawnUnlockable(baseUnlockable);
                         PlaceableShipObject shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
                             .GetComponent<PlaceableShipObject>();
-                        
+
                         if (shipObject is null)
                             shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
                                 .GetComponentInChildren<PlaceableShipObject>();
                         if (shipObject is null)
                             continue;
-                        
+
                         LobbyControl.Log.LogWarning($"{unlockable.unlockableName} continuing");
                         var parentObject = shipObject.parentObject;
                         if (parentObject != null)
@@ -702,7 +687,7 @@ Extra:
                             LobbyControl.Log.LogWarning($"{unlockable.unlockableName} parentObject");
                             if (unlockable.inStorage)
                                 shipObject.parentObject.disableObject = true;
-                            
+
                             var offset = parentObject.positionOffset;
                             var localOffset = startOfRound.elevatorTransform.TransformPoint(offset);
                             var position = shipObject.mainMesh.transform.position;
@@ -723,9 +708,9 @@ Extra:
                             var parentPos = parentObjectSecondary.position;
                             var transform = shipObject.mainMesh.transform;
                             var position = transform.position;
-                            var placementPosition = parentPos - 
-                                                    ( (parentObjectSecondary.transform.position - position) + 
-                                                      (position - shipObject.placeObjectCollider.transform.position) );
+                            var placementPosition = parentPos -
+                                                    ((parentObjectSecondary.transform.position - position) +
+                                                     (position - shipObject.placeObjectCollider.transform.position));
                             unlockable.placedPosition = placementPosition;
                             var rotation = parentObjectSecondary.rotation;
                             var step1 = rotation * Quaternion.Inverse(transform.rotation);
@@ -747,14 +732,18 @@ Extra:
                         },
                     };
 
-                    for (var baseUnlockable = 0; baseUnlockable < startOfRound.unlockablesList.unlockables.Count; baseUnlockable++)
+                    for (var baseUnlockable = 0;
+                         baseUnlockable < startOfRound.unlockablesList.unlockables.Count;
+                         baseUnlockable++)
                     {
                         var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
                         if (unlockable.alreadyUnlocked && !unlockable.inStorage)
                         {
-                            FastBufferWriter bufferWriter = startOfRound.__beginSendClientRpc(1076853239U, clientRpcParams, RpcDelivery.Reliable);
+                            FastBufferWriter bufferWriter =
+                                startOfRound.__beginSendClientRpc(1076853239U, clientRpcParams, RpcDelivery.Reliable);
                             BytePacker.WriteValueBitPacked(bufferWriter, baseUnlockable);
-                            startOfRound.__endSendClientRpc(ref bufferWriter, 1076853239U, clientRpcParams, RpcDelivery.Reliable);
+                            startOfRound.__endSendClientRpc(ref bufferWriter, 1076853239U, clientRpcParams,
+                                RpcDelivery.Reliable);
                         }
                     }
 
@@ -785,20 +774,23 @@ Extra:
                 else
                     ulongList.Add(999UL);
             }
-            
-            ClientRpcParams clientRpcParams = new ClientRpcParams() {
-                Send = new ClientRpcSendParams() {
+
+            ClientRpcParams clientRpcParams = new ClientRpcParams()
+            {
+                Send = new ClientRpcSendParams()
+                {
                     TargetClientIds = rpcList,
                 },
             };
-            
+
             var groupCredits = Object.FindObjectOfType<Terminal>().groupCredits;
             var profitQuota = TimeOfDay.Instance.profitQuota;
             var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
             var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
             var controller = StartOfRound.Instance.localPlayerController;
 
-            FastBufferWriter bufferWriter = startOfRound.__beginSendClientRpc(886676601U, clientRpcParams, RpcDelivery.Reliable);
+            FastBufferWriter bufferWriter =
+                startOfRound.__beginSendClientRpc(886676601U, clientRpcParams, RpcDelivery.Reliable);
             BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
             BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
             bufferWriter.WriteValueSafe<bool>(true);
@@ -809,10 +801,9 @@ Extra:
             BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
             BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
             BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
-            BytePacker.WriteValueBitPacked(bufferWriter,  startOfRound.randomMapSeed);
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.randomMapSeed);
             bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile);
             startOfRound.__endSendClientRpc(ref bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable);
-
         }
     }
 }
