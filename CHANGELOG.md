@@ -1,3 +1,7 @@
+## v2.4.6
+- rewrite LateJoin system to prevent joining while loading a moon
+- slightly change command handling to ( hopefully ) allow spaces in the `rename` sub-command
+
 ## v2.4.5
 - make some patches future-proof
 - try use MonoMod to prevent Pulling the lever if a player is in queue
