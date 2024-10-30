@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using GameNetcodeStuff;
 using HarmonyLib;
-using HarmonyLib.Public.Patching;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using MonoMod.Utils;
 using Steamworks;
 using Unity.Netcode;
 using UnityEngine;
@@ -22,6 +17,7 @@ internal class TransparentPlayerFix
 
     private static uint? _killPlayerID;
     private static uint? _revivePlayerID;
+    private static uint? _sendNewValuesID;
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
@@ -60,24 +56,34 @@ internal class TransparentPlayerFix
         {
             var methodInfo =
                 AccessTools.Method(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayerClientRpc));
-            
+
             Utils.TryGetRpcID(methodInfo, out var id);
             _killPlayerID = id;
-            
         }
 
         if (!_revivePlayerID.HasValue)
         {
-            var methodInfo = AccessTools.Method(typeof(StartOfRound),nameof(StartOfRound.Debug_ReviveAllPlayersClientRpc));
+            var methodInfo =
+                AccessTools.Method(typeof(StartOfRound), nameof(StartOfRound.Debug_ReviveAllPlayersClientRpc));
 
             Utils.TryGetRpcID(methodInfo, out var id);
             _revivePlayerID = id;
         }
+
+        if (!_sendNewValuesID.HasValue)
+        {
+            var methodInfo = AccessTools.Method(typeof(PlayerControllerB),
+                nameof(PlayerControllerB.SendNewPlayerValuesServerRpc));
+
+            Utils.TryGetRpcID(methodInfo, out var id);
+            _sendNewValuesID = id;
+            var harmonyTarget = AccessTools.Method(typeof(PlayerControllerB), $"__rpc_handler_{id}");
+            var harmonyPrefix = AccessTools.Method(typeof(TransparentPlayerFix), nameof(RespawnDcPlayer));
+            LobbyControl._harmony.Patch(harmonyTarget, new HarmonyMethod(harmonyPrefix), null, null, null, null);
+        }
     }
 
     //SendNewPlayerValuesServerRpc
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.__rpc_handler_2504133785))]
     private static void RespawnDcPlayer(NetworkBehaviour target, __RpcParams rpcParams)
     {
         var controllerB = target as PlayerControllerB;
@@ -100,30 +106,29 @@ internal class TransparentPlayerFix
 
         try
         {
-            
             if (!GameNetworkManager.Instance.disableSteam && !NetworkManager.Singleton.IsServer)
             {
                 // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-                SteamFriends.GetFriends().ToList<Friend>();
-            } 
-            
+                SteamFriends.GetFriends().ToList();
+            }
+
             var rpcList = startOfRound.ClientPlayerList.Keys.Where(id =>
             {
-                if (GameNetworkManager.Instance.disableSteam || NetworkManager.Singleton.IsServer) 
+                if (GameNetworkManager.Instance.disableSteam || NetworkManager.Singleton.IsServer)
                     return true;
-                
+
                 if (startOfRound.ClientPlayerList.TryGetValue(id, out var index))
                 {
                     var playerObject = startOfRound.allPlayerScripts[index];
-                        
+
                     var friend = new Friend(playerObject.playerSteamId);
                     if (friend.IsFriend)
                         return true;
                 }
-                
+
                 return false;
             }).ToList();
-            
+
 
             rpcList.Remove(clientID);
             rpcList.Remove(NetworkManager.Singleton.LocalClientId);

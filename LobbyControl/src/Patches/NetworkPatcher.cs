@@ -1,6 +1,4 @@
-using System.Collections;
 using HarmonyLib;
-using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
@@ -75,27 +73,12 @@ namespace LobbyControl.Patches
         ///     Allow to reopen the steam lobby after a game has ended.
         /// </summary>
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SetShipReadyToLand))]
         [HarmonyPriority(0)]
-        private static IEnumerator ReopenSteamLobby(IEnumerator coroutine, StartOfRound __instance, bool __runOriginal)
+        private static void ReopenSteamLobby(StartOfRound __instance, bool __runOriginal)
         {
             if (!__runOriginal)
-                yield break;
-
-            // The method we're patching here is a coroutine. Fully exhaust it before adding our code.
-            while (coroutine.MoveNext())
-                yield return coroutine.Current;
-            // At this point all players should have been revived and the stats screen should have been shown.
-
-            // Nothing to do at all if this is not the host.
-            if (!__instance.IsServer)
-                yield break;
-
-            // The "getting fired" cutscene runs in a separate coroutine. Ensure we don't open the lobby until after
-            // it is over.
-            yield return new WaitForSeconds(0.5f);
-            yield return new WaitUntil(() => !__instance.firingPlayersCutsceneRunning);
-
+                return;
 
             LobbyControl.Log.LogDebug("Lobby can be re-opened");
 
@@ -103,15 +86,15 @@ namespace LobbyControl.Patches
 
             if (LobbyControl.PluginConfig.SteamLobby.AutoLobby.Value)
             {
+                // Restore the friend invite button in the ESC menu.
+                Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
+
                 var manager = GameNetworkManager.Instance;
 
                 if (!manager.currentLobby.HasValue)
-                    yield break;
+                    return;
 
                 manager.SetLobbyJoinable(true);
-
-                // Restore the friend invite button in the ESC menu.
-                Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
             }
         }
 
