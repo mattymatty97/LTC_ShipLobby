@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System.Linq;
+using HarmonyLib;
 using LobbyControl.TerminalCommands;
 using UnityEngine;
 
@@ -50,8 +51,15 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return false;
 
-            string[] array = __instance.screenText.text
-                .Substring(__instance.screenText.text.Length - __instance.textAdded).Split(' ', 3);
+            var list = __instance.screenText.text
+                .Substring(__instance.screenText.text.Length - __instance.textAdded).Split(' ', 3).ToList();
+
+            while (list.Count < 3)
+            {
+                list.Add("");
+            }
+
+            var array = list.ToArray();
 
             if (CommandManager.TryExecuteCommand(array, out TerminalNode terminalNode))
             {
