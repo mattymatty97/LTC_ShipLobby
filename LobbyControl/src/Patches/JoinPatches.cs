@@ -192,7 +192,7 @@ internal class JoinPatches
             LobbyControl.Hooks.Add(new Hook(monoModTarget, CheckValidStart, new HookConfig { Priority = 999 }));
         else
             LobbyControl.Log.LogFatal(
-                $"Cannot apply patch to StartGame monoModTarget:{monoModTarget} monoModWrapper:{nameof(CheckValidStart)}");
+                $"Cannot apply patch to StartGame");
     }
 
     private static void ClientConnectionCompleted1(
@@ -402,7 +402,8 @@ internal class JoinPatches
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SetShipReadyToLand))]
-    private static void OnReadyToLand(StartOfRound __instance)
+    [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
+    private static void OnReadyToLand()
     {
         isLanding = false;
     }

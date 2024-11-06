@@ -1,3 +1,6 @@
+## v2.4.9
+- fix players being unable to join on rehost
+
 ## v2.4.6
 - rewrite LateJoin system to prevent joining while loading a moon
 - slightly change command handling to ( hopefully ) allow spaces in the `rename` sub-command
