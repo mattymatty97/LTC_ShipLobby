@@ -27,7 +27,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.4.9";
+        public const string VERSION = "2.4.10";
 
         internal static ManualLogSource Log;
 
@@ -101,7 +101,6 @@ namespace LobbyControl
             internal static void Init(BaseUnityPlugin plugin)
             {
                 var config = plugin.Config;
-                config.SaveOnConfigSet = false;
                 //Initialize Configs
                 //ItemSync
                 ItemSync.GhostItems = config.Bind("ItemSync", "ghost_items", true
